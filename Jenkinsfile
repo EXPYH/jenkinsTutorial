@@ -77,12 +77,10 @@ pipeline {
             }
         }
 
-
-
         stage('Lint Backend'){
             agent{
                 docker{
-                    image 'node:latest'/
+                    image 'node:latest'
                 }
             }
             steps{
