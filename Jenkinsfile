@@ -22,21 +22,22 @@ pipeline {
                     branch: 'master'
                     credentialsId: 'jenkinstutorial'
             }
-        }
+            post{
+                success{
+                    echo 'Successfully Cloned Repository'
+                }
+            }
 
-        post{
-            success{
-                echo 'Successfully Cloned Repository'
+            always{
+                echo "I tried..."
+            }
+
+            cleanup {
+                echo "after all other post condition"
             }
         }
 
-        always{
-            echo "I tried..."
-        }
 
-        cleanup {
-            echo "after all other post condition"
-        }
 
         stage('Only for production'){
             when{
@@ -58,23 +59,106 @@ pipeline {
                     '''
                 
                 }
+            }        
+            post {
+                success {
+                    echo 'Successfully Cloned Repository'
+
+                    mail to: 'dublineryh@gmail.com',
+                        subject: "Deploy Frontend Success",
+                        body: "Successfully developed frontend!"
+                }
+                failure {
+                    echo "I failed"
+                    mail to: 'dublineryh@gmail.com',
+                        subject: "Deploy Frontend Success",
+                        body: "failed to developed frontend!"
+                }
             }
         }
 
-        post {
-            success {
-                echo 'Successfully Cloned Repository'
 
-                mail to: 'dublineryh@gmail.com',
-                    subject: "Deploy Frontend Success",
-                    body: "Successfully developed frontend!"
+
+        stage('Lint Backend'){
+            agent{
+                docker{
+                    image 'node:latest'/
+                }
             }
-            failure {
-                echo "I failed"
-                mail to: 'dublineryh@gmail.com',
-                    subject: "Deploy Frontend Success",
-                    body: "failed to developed frontend!"
+            steps{
+                dir('./server'){
+                    sh '''
+                    npm install&&
+                    npm run lint
+                    '''
+                }
             }
         }
+        stage('Test Backend'){
+            agent{
+                docker{
+                    image 'node:latest'/
+                }
+            }
+            steps{
+                dir('./server'){
+                    sh '''
+                    npm install&&
+                    npm run test
+                    '''
+                }
+            }
+        }
+        stage('Build Backend'){
+            agent{
+                docker{
+                    image 'node:latest'/
+                }
+            }
+            steps{
+                dir('./server'){
+                    sh '''
+                    npm install&&
+                    npm run lint
+                    '''
+                }
+            }
+        }
+        stage('Build Backend'){
+            agent any
+            steps{
+                echo 'Build Backend'
+                dir('./server'){
+                    sh """
+                    docker build . -t server --build-arg env=${PROD}
+                    """
+                }
+            }
+            post{
+                failure{
+                    error 'This pipeline stops here...'
+                }
+            }
+        }
+        stage('Deploy Backend'){
+            agent any
+            steps{
+                echo 'Deploy Backend'
+                dir('./server'){
+                    sh """
+                    docker rm -f $(docker ps -aq)
+                    docker run -p 80:80 -d server
+                    """
+                }
+            }
+            post{
+                success {
+                    mail to : 'dublineryh@gmail.com'
+                        subject: "deploy success"
+                        body : "Successfully deployed"
+                }
+            }
+        }
+
     }
 }
