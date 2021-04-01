@@ -16,7 +16,6 @@ pipeline {
         stage('Prepare'){
             agent any
             steps {
-                echo "Lets start Long Journey! ENV : ${ENV}"
                 echo 'Clonning Repository'
                 git url: "https://github.com/EXPYH/jenkinsTutorial",
                     branch: 'master'
